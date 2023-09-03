@@ -9,9 +9,12 @@ import (
 
 type CryptoRandomGenerator struct {
 	alphabet   Alphabet
-	builder    strings.Builder
 	randBufOff int
 	randBuf    []byte
+	seed       uint64
+	seedMax    uint
+	seedUsed   uint
+	builder    strings.Builder
 }
 
 func NewCryptoRandomGenerator(alphabet Alphabet) CryptoRandomGenerator {
@@ -20,10 +23,14 @@ func NewCryptoRandomGenerator(alphabet Alphabet) CryptoRandomGenerator {
 		panic(err)
 	}
 
-	return CryptoRandomGenerator{
+	c := CryptoRandomGenerator{
 		alphabet: alphabet,
 		randBuf:  buf,
 	}
+
+	c.seed = c.newSeed()
+
+	return c
 }
 
 func (c CryptoRandomGenerator) Password(length int) Password {
@@ -51,58 +58,51 @@ func (c *CryptoRandomGenerator) newSeed() (seed uint64) {
 	return
 }
 
-func (c *CryptoRandomGenerator) generate(length int) (generated string) {
-	c.builder.Grow(length)
+func (p *CryptoRandomGenerator) generate(length int) (generated string) {
+	var idx0, idx1, idx2, idx3 uint64
+	alphaLen := uint64(len(p.alphabet))
+	p.builder.Grow(length)
 
-	alphaLen := uint64(len(c.alphabet))
-	seed := uint64(0)
-	idx0 := uint64(0)
-	idx1 := uint64(0)
-	idx2 := uint64(0)
-	idx3 := uint64(0)
 	for i := 0; i < length; {
 		switch i {
 		case length - 1:
-			if seed < alphaLen {
-				seed = c.newSeed()
-			}
-			seed, idx0 = bits.Div64(0, seed, alphaLen)
-			c.builder.WriteByte(c.alphabet[idx0])
+			p.seed, idx0 = bits.Div64(0, p.seed, alphaLen)
+			p.builder.WriteByte(p.alphabet[idx0])
+			p.seedUsed++
 			i++
 
 		case length - 2:
-			if seed < intPow(alphaLen, 2) {
-				seed = c.newSeed()
-			}
-			seed, idx0 = bits.Div64(0, seed, alphaLen)
-			seed, idx1 = bits.Div64(0, seed, alphaLen)
-			c.builder.Write([]byte{c.alphabet[idx0], c.alphabet[idx1]})
+			p.seed, idx0 = bits.Div64(0, p.seed, alphaLen)
+			p.seed, idx1 = bits.Div64(0, p.seed, alphaLen)
+			p.builder.Write([]byte{p.alphabet[idx0], p.alphabet[idx1]})
+			p.seedUsed += 2
 			i += 2
 
 		case length - 3:
-			if seed < intPow(alphaLen, 3) {
-				seed = c.newSeed()
-			}
-			seed, idx0 = bits.Div64(0, seed, alphaLen)
-			seed, idx1 = bits.Div64(0, seed, alphaLen)
-			seed, idx2 = bits.Div64(0, seed, alphaLen)
-			c.builder.Write([]byte{c.alphabet[idx0], c.alphabet[idx1], c.alphabet[idx2]})
+			p.seed, idx0 = bits.Div64(0, p.seed, alphaLen)
+			p.seed, idx1 = bits.Div64(0, p.seed, alphaLen)
+			p.seed, idx2 = bits.Div64(0, p.seed, alphaLen)
+			p.builder.Write([]byte{p.alphabet[idx0], p.alphabet[idx1], p.alphabet[idx2]})
+			p.seedUsed += 3
 			i += 3
 
 		default:
-			if seed < intPow(alphaLen, 4) {
-				seed = c.newSeed()
-			}
-			seed, idx0 = bits.Div64(0, seed, alphaLen)
-			seed, idx1 = bits.Div64(0, seed, alphaLen)
-			seed, idx2 = bits.Div64(0, seed, alphaLen)
-			seed, idx3 = bits.Div64(0, seed, alphaLen)
-			c.builder.Write([]byte{c.alphabet[idx0], c.alphabet[idx1], c.alphabet[idx2], c.alphabet[idx3]})
+			p.seed, idx0 = bits.Div64(0, p.seed, alphaLen)
+			p.seed, idx1 = bits.Div64(0, p.seed, alphaLen)
+			p.seed, idx2 = bits.Div64(0, p.seed, alphaLen)
+			p.seed, idx3 = bits.Div64(0, p.seed, alphaLen)
+			p.builder.Write([]byte{p.alphabet[idx0], p.alphabet[idx1], p.alphabet[idx2], p.alphabet[idx3]})
+			p.seedUsed += 4
 			i += 4
+		}
+
+		if p.seedUsed >= p.seedMax {
+			p.seed = p.newSeed()
+			p.seedUsed = 0
 		}
 	}
 
-	generated = c.builder.String()
-	c.builder.Reset()
+	generated = p.builder.String()
+	p.builder.Reset()
 	return
 }

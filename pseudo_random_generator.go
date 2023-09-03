@@ -8,14 +8,20 @@ import (
 
 type PseudoRandomGenerator struct {
 	alphabet Alphabet
-	builder  strings.Builder
 	source   rand.Rand
+	seed     uint64
+	seedMax  uint
+	seedUsed uint
+	builder  strings.Builder
 }
 
 func NewPseudoRandomGenerator(alphabet Alphabet) *PseudoRandomGenerator {
+	source := *rand.New(rand.NewSource(rand.Int63()))
 	return &PseudoRandomGenerator{
 		alphabet: alphabet,
-		source:   *rand.New(rand.NewSource(rand.Int63())),
+		source:   source,
+		seed:     source.Uint64(),
+		seedMax:  64 / intLog2[int, uint](len(alphabet)),
 	}
 }
 
@@ -32,53 +38,46 @@ func (p *PseudoRandomGenerator) Passwords(length, count int) []Password {
 }
 
 func (p *PseudoRandomGenerator) generate(length int) (generated string) {
+	var idx0, idx1, idx2, idx3 uint64
+	alphaLen := uint64(len(p.alphabet))
 	p.builder.Grow(length)
 
-	alphaLen := uint64(len(p.alphabet))
-	seed := uint64(0)
-	idx0 := uint64(0)
-	idx1 := uint64(0)
-	idx2 := uint64(0)
-	idx3 := uint64(0)
 	for i := 0; i < length; {
 		switch i {
 		case length - 1:
-			if seed < alphaLen {
-				seed = p.source.Uint64()
-			}
-			seed, idx0 = bits.Div64(0, seed, alphaLen)
+			p.seed, idx0 = bits.Div64(0, p.seed, alphaLen)
 			p.builder.WriteByte(p.alphabet[idx0])
+			p.seedUsed++
 			i++
 
 		case length - 2:
-			if seed < intPow(alphaLen, 2) {
-				seed = p.source.Uint64()
-			}
-			seed, idx0 = bits.Div64(0, seed, alphaLen)
-			seed, idx1 = bits.Div64(0, seed, alphaLen)
+			p.seed, idx0 = bits.Div64(0, p.seed, alphaLen)
+			p.seed, idx1 = bits.Div64(0, p.seed, alphaLen)
 			p.builder.Write([]byte{p.alphabet[idx0], p.alphabet[idx1]})
+			p.seedUsed += 2
 			i += 2
 
 		case length - 3:
-			if seed < intPow(alphaLen, 3) {
-				seed = p.source.Uint64()
-			}
-			seed, idx0 = bits.Div64(0, seed, alphaLen)
-			seed, idx1 = bits.Div64(0, seed, alphaLen)
-			seed, idx2 = bits.Div64(0, seed, alphaLen)
+			p.seed, idx0 = bits.Div64(0, p.seed, alphaLen)
+			p.seed, idx1 = bits.Div64(0, p.seed, alphaLen)
+			p.seed, idx2 = bits.Div64(0, p.seed, alphaLen)
 			p.builder.Write([]byte{p.alphabet[idx0], p.alphabet[idx1], p.alphabet[idx2]})
+			p.seedUsed += 3
 			i += 3
 
 		default:
-			if seed < intPow(alphaLen, 4) {
-				seed = p.source.Uint64()
-			}
-			seed, idx0 = bits.Div64(0, seed, alphaLen)
-			seed, idx1 = bits.Div64(0, seed, alphaLen)
-			seed, idx2 = bits.Div64(0, seed, alphaLen)
-			seed, idx3 = bits.Div64(0, seed, alphaLen)
+			p.seed, idx0 = bits.Div64(0, p.seed, alphaLen)
+			p.seed, idx1 = bits.Div64(0, p.seed, alphaLen)
+			p.seed, idx2 = bits.Div64(0, p.seed, alphaLen)
+			p.seed, idx3 = bits.Div64(0, p.seed, alphaLen)
 			p.builder.Write([]byte{p.alphabet[idx0], p.alphabet[idx1], p.alphabet[idx2], p.alphabet[idx3]})
+			p.seedUsed += 4
 			i += 4
+		}
+
+		if p.seedUsed >= p.seedMax {
+			p.seed = p.source.Uint64()
+			p.seedUsed = 0
 		}
 	}
 
