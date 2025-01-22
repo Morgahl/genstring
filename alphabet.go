@@ -23,6 +23,14 @@ const (
 
 type Alphabet string
 
+func (a Alphabet) MinEncBits() int {
+	return int(math.Floor(math.Log2(float64(len(a)))))
+}
+
+func (a Alphabet) MaxEncBits() int {
+	return int(math.Ceil(math.Log2(float64(len(a)))))
+}
+
 func (a Alphabet) PermuteRunes() Alphabet {
 	ar := []rune(a)
 	shuffled := make([]rune, len(ar))
@@ -38,12 +46,4 @@ func (a Alphabet) PermuteBytes() Alphabet {
 		shuffled[i] = a[j]
 	}
 	return Alphabet(shuffled)
-}
-
-func (a Alphabet) MinEncBits() int {
-	return int(math.Floor(math.Log2(float64(len(a)))))
-}
-
-func (a Alphabet) MaxEncBits() int {
-	return int(math.Ceil(math.Log2(float64(len(a)))))
 }

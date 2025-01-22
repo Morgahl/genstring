@@ -3,16 +3,30 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"text/tabwriter"
 
 	"github.com/morgahl/genstring"
 )
 
+const (
+	PASSWORD_LENGTH = 64
+)
+
 func main() {
+	var password_length = PASSWORD_LENGTH
+	if len(os.Args) > 1 {
+		length, err := strconv.Atoi(os.Args[1])
+		if err != nil {
+			panic(err)
+		}
+		password_length = length
+	}
+
 	w := new(tabwriter.Writer)
 	w.Init(os.Stdout, 0, 8, 0, '\t', tabwriter.Debug)
 
-	pseudoPass := genstring.NewPseudoRandomGenerator(genstring.PasswordCharAll).Password(16)
+	pseudoPass := genstring.NewPseudoRandomGenerator(genstring.PasswordCharAll.PermuteRunes()).Password(password_length)
 	fmt.Fprintln(w, "fmt.Println\t", pseudoPass)
 	fmt.Fprintf(w, "%%s\t %s\n", pseudoPass)
 	fmt.Fprintf(w, "%%v\t %v\n", pseudoPass)
@@ -25,7 +39,7 @@ func main() {
 	w.Flush()
 	println("println(pass)\t|", pseudoPass)
 
-	pseudoPass2 := genstring.NewPseudoRandomGenerator(genstring.PasswordCharAll).Password(16)
+	pseudoPass2 := genstring.NewPseudoRandomGenerator(genstring.PasswordCharAll.PermuteRunes()).Password(password_length)
 	fmt.Fprintln(w, "fmt.Println\t", pseudoPass2)
 	fmt.Fprintf(w, "%%s\t %s\n", pseudoPass2)
 	fmt.Fprintf(w, "%%v\t %v\n", pseudoPass2)
@@ -38,7 +52,7 @@ func main() {
 	w.Flush()
 	println("println(pass)\t|", pseudoPass2)
 
-	cryptoPass := genstring.NewCryptoRandomGenerator(genstring.PasswordCharAll).Password(16)
+	cryptoPass := genstring.NewCryptoRandomGenerator(genstring.PasswordCharAll.PermuteRunes()).Password(password_length)
 	fmt.Fprintln(w, "fmt.Println\t", cryptoPass)
 	fmt.Fprintf(w, "%%s\t %s\n", cryptoPass)
 	fmt.Fprintf(w, "%%v\t %v\n", cryptoPass)

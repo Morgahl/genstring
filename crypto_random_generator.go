@@ -26,6 +26,7 @@ func NewCryptoRandomGenerator(alphabet Alphabet) CryptoRandomGenerator {
 	c := CryptoRandomGenerator{
 		alphabet: alphabet,
 		randBuf:  buf,
+		seedMax:  64 / intLog2[int, uint](len(alphabet)),
 	}
 
 	c.seed = c.newSeed()
@@ -46,7 +47,7 @@ func (c CryptoRandomGenerator) Passwords(length, count int) []Password {
 }
 
 func (c *CryptoRandomGenerator) newSeed() (seed uint64) {
-	if c.randBufOff == len(c.randBuf) {
+	if c.randBufOff+8 > len(c.randBuf) {
 		c.randBufOff = 0
 		if _, err := rand.Read(c.randBuf); err != nil {
 			panic(err)
@@ -96,7 +97,7 @@ func (p *CryptoRandomGenerator) generate(length int) (generated string) {
 			i += 4
 		}
 
-		if p.seedUsed >= p.seedMax {
+		if p.seedMax-p.seedUsed < 4 {
 			p.seed = p.newSeed()
 			p.seedUsed = 0
 		}

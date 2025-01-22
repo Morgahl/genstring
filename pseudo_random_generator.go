@@ -75,7 +75,7 @@ func (p *PseudoRandomGenerator) generate(length int) (generated string) {
 			i += 4
 		}
 
-		if p.seedUsed >= p.seedMax {
+		if p.seedMax-p.seedUsed < 4 {
 			p.seed = p.source.Uint64()
 			p.seedUsed = 0
 		}
